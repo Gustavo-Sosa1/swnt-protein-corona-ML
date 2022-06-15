@@ -384,6 +384,7 @@ def clean_up_data_biopy(raw_data):
         aa_percent = analyzed_seq.get_amino_acids_percent()
         reg_aa = regularize_aa(aa_percent)# dict
         aa_values = alphabetize_aa(reg_aa)
+
         if X_Presence == -1:
             mw = analyzed_seq.molecular_weight() #MW
         else:
@@ -394,16 +395,58 @@ def clean_up_data_biopy(raw_data):
             analyzed_seq_adj = ProteinAnalysis(seq_adj)
             mw = analyzed_seq_adj.molecular_weight()
 
-
-
         aromat = analyzed_seq.aromaticity()
-        instab = analyzed_seq.instability_index() # float
-        flex = analyzed_seq.flexibility() # returns a list
+
+        if X_Presence == -1 and U_Presence == -1 :
+            instab = analyzed_seq.instability_index() # float
+        elif X_Presence != -1 and U_Presence == -1 :
+            X_loc_index = list(find_all(seq, 'X'))
+            seq_list = string_to_list(seq)
+            seq_list_new = replace_all(seq_list, X_loc_index, "L")
+            seq_adj = ''.join(seq_list_new)
+            analyzed_seq_adj = ProteinAnalysis(seq_adj)
+            instab = analyzed_seq_adj.instability_index()
+        elif X_Presence == -1 and U_Presence != -1 :
+            U_loc_index = list(find_all(seq, 'U'))
+            seq_list = string_to_list(seq)
+            seq_list_new = replace_all(seq_list, U_loc_index, "C")
+            seq_adj = ''.join(seq_list_new)
+            analyzed_seq_adj = ProteinAnalysis(seq_adj)
+            instab = analyzed_seq_adj.instability_index()
+        elif X_Presence != -1 and U_Presence != -1:
+            X_loc_index = list(find_all(seq, 'X'))
+            U_loc_index = list(find_all(seq, 'U'))
+            seq_list = string_to_list(seq)
+            seq_list_X_replaced = replace_all(seq_list, X_loc_index, "L")
+            seq_list_X_and_U_replaced = replace_all(seq_list_X_replaced, U_loc_index, "C")
+            seq_adj = ''.join(seq_list_X_and_U_replaced)
+            analyzed_seq_adj = ProteinAnalysis(seq_adj)
+            instab = analyzed_seq_adj.instability_index()
+
+        if X_Presence == -1:
+            flex = analyzed_seq.flexibility() # returns a list
+        else:
+            X_loc_index = list(find_all(seq, 'X'))
+            seq_list = string_to_list(seq)
+            seq_list_new = replace_all(seq_list,X_loc_index, "L")
+            seq_adj = ''.join(seq_list_new)
+            analyzed_seq_adj = ProteinAnalysis(seq_adj)
+            flex = analyzed_seq_adj.flexibility()
+
         iso = analyzed_seq.isoelectric_point() 
         secStruct = analyzed_seq.secondary_structure_fraction() # tuple of three floats (helix, turn, sheet)
         secStruct_disorder = 1 - sum(secStruct)
         flex_stat = (np.mean(flex), np.std(flex), np.var(flex), np.max(flex), np.min(flex), np.median(flex))
-        gravy = analyzed_seq.gravy()
+        if X_Presence == -1:
+            gravy = analyzed_seq.gravy()
+        else:
+            X_loc_index = list(find_all(seq, 'X'))
+            seq_list = string_to_list(seq)
+            seq_list_new = replace_all(seq_list,X_loc_index, "L")
+            seq_adj = ''.join(seq_list_new)
+            analyzed_seq_adj = ProteinAnalysis(seq_adj)
+            gravy = analyzed_seq_adj.gravy()
+
         temp_df = pd.DataFrame([[seq, *aa_values, mw, aromat, instab, *flex_stat, iso, *secStruct, secStruct_disorder, gravy]])
         
 
