@@ -143,7 +143,7 @@ def grab_max(df1, df2, column):
     else:
         return df2[column].max()
 
-def normalize_mass_length(df1, df2):
+def normalize_mass_length_2DF(df1, df2):
 
     max_length = grab_max(df1, df2, 'Length')
     max_mass = grab_max(df1, df2, 'Mass')
@@ -159,6 +159,17 @@ def normalize_mass_length(df1, df2):
     df2['molecular_weight'] = df2['molecular_weight'] / max_mw
 
     return df1, df2
+
+def normalize_mass_length_1DF(df1):
+    max_length = df1['Length'].max
+    max_mass = df1['mass'].max
+    max_mw = df1['molecular_weight'].max
+
+    df1['length'] = df1['Length'] / max_length
+    df1['mass'] = df1['Mass'] / max_mass
+    df1['molecular_weight'] = df1['molecular_weight'] / max_mw
+
+    return df1
 
 
 def metal_binding_analysis(data):
@@ -332,6 +343,22 @@ def clean_up_data_no_interpro_go(raw_data):
 
     return cleaned_data
 
+def string_to_list(str):
+    return [char for char in str]
+
+def find_all(str, sub):
+    start = 0
+    while True:
+        start = str.find(sub, start)
+        if start == -1: return
+        yield start
+        start += len(sub)
+
+def replace_all(list, loc_list, value):
+    for index in loc_list:
+        list[index] = value
+    return list
+
 
 def clean_up_data_biopy(raw_data):
     # least data only biopy
@@ -345,14 +372,31 @@ def clean_up_data_biopy(raw_data):
     sequences = raw_data['Sequence']
     seq_data = pd.DataFrame([])
     first_pass = True
+    #count = 0
     for seq in sequences:
+        X_Presence = seq.find("X")
+        U_Presence = seq.find("U")
+        #count = count + 1
+        #print(count)
+        #seq = seq.replace("U", "") #cleans sequences to remove selenocysteine
         analyzed_seq = ProteinAnalysis(seq)
         aaCount = analyzed_seq.count_amino_acids()
         aa_percent = analyzed_seq.get_amino_acids_percent()
         reg_aa = regularize_aa(aa_percent)# dict
         aa_values = alphabetize_aa(reg_aa)
-        mw = analyzed_seq.molecular_weight() #MW 
-        aromat = analyzed_seq.aromaticity() #
+        if X_Presence == -1:
+            mw = analyzed_seq.molecular_weight() #MW
+        else:
+            X_loc_index = list(find_all(seq, 'X'))
+            seq_list = string_to_list(seq)
+            seq_list_new = replace_all(seq_list,X_loc_index, "L")
+            seq_adj = ''.join(seq_list_new)
+            analyzed_seq_adj = ProteinAnalysis(seq_adj)
+            mw = analyzed_seq_adj.molecular_weight()
+
+
+
+        aromat = analyzed_seq.aromaticity()
         instab = analyzed_seq.instability_index() # float
         flex = analyzed_seq.flexibility() # returns a list
         iso = analyzed_seq.isoelectric_point() 

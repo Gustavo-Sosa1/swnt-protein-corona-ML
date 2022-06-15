@@ -197,6 +197,10 @@ def netsurfp_1point1_data_processing(unique_id_list, complete_netsurfp_df):
     return netsurfp_processed_data
 
 def netsurfp_2_data_processing(unique_id_list, complete_netsurfp_df):
+   #clean up data by removing missing amino acids
+
+    complete_netsurfp_df = complete_netsurfp_df[complete_netsurfp_df['seq'] != 'X']
+
     first_pass=True
     for i in unique_id_list:
         # print('hi')
