@@ -459,6 +459,15 @@ def clean_up_data_biopy(raw_data):
     cleaned_data = cleaned_data.fillna(0)
     return cleaned_data
 
+
+def clean_up_data_mass_spec(raw_data):
+    #calculate percent relative abundance
+    raw_data["Avg R_Abd"] = (raw_data["Relative Abundance_1"] + raw_data["Relative Abundance_2"] + raw_data["Relative Abundance_3"]) / 3
+    Abudance_sum = raw_data["Avg R_Abd"].sum()
+    raw_data['Abundance_%'] = raw_data["Avg R_Abd"] / Abudance_sum
+    #calculate enrichement
+
+
 def clean_up_data_biopy_no_ss_flex(raw_data):
     raw_data = raw_data.fillna(0) # fill nans
     
