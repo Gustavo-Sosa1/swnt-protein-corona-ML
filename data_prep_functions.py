@@ -469,7 +469,7 @@ def clean_up_data_mass_spec(raw_data):
     Abudance_sum = raw_data["Avg NP Relative Abundance"].sum()
     raw_data['NP_%_Abundance'] = (raw_data["Avg NP Relative Abundance"] / Abudance_sum) * 100
     #calculate enrichement
-    raw_data["Enrichment"] = np.log2(raw_data["FBS Relative Abundance"] / raw_data["Avg NP Relative Abundance"])
+    raw_data["Enrichment"] = np.log2( raw_data["Avg NP Relative Abundance"]/ raw_data["FBS Relative Abundance"])
     #remove any protein with avg zero abundance
     raw_data["Avg NP Relative Abundance"] = raw_data["Avg NP Relative Abundance"].replace(0,np.nan)
     raw_data.dropna(subset=["Avg NP Relative Abundance"], inplace=True)
