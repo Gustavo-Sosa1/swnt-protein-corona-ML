@@ -4,6 +4,7 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import pandas as pd
 import numpy as np
 import scipy.stats
+from datetime import datetime
 
 def percent_containing(string_to_parse, length, search_string):
     return sum(1 for _ in re.finditer(r'\b%s\b' % re.escape(search_string), str(string_to_parse))) / length
@@ -474,7 +475,7 @@ def clean_up_data_mass_spec(raw_data):
     raw_data["Avg NP Relative Abundance"] = raw_data["Avg NP Relative Abundance"].replace(0,np.nan)
     raw_data.dropna(subset=["Avg NP Relative Abundance"], inplace=True)
 
-    return raw_data[["Accession", "NP_%_Abundance", "Enrichment"]]
+    return raw_data[["Accession", "NP_%_Abundance", "Enrichment", "FBS Relative Abundance"]]
 
 def clean_up_data_biopy_no_ss_flex(raw_data):
     raw_data = raw_data.fillna(0) # fill nans
@@ -824,6 +825,12 @@ def confidence_interval(data, confidence=0.95):
     m, se = np.mean(a), scipy.stats.sem(a)
     conf_int = se * scipy.stats.t.ppf((1 + confidence) / 2., n-1)
     return conf_int
+
+def log_metrics_data(data, SD):
+    date_time = datetime.now().strftime("%d%m%Y-%H%M%S-")
+    filepath = "metrics_data/" + date_time + SD + ".xlsx"
+    data.to_excel(filepath)
+
 
 if __name__ == "__main__":
     print(type(ProteinAnalysis))
