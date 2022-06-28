@@ -1,4 +1,7 @@
 import re
+
+import matplotlib.pyplot as plt
+
 from interpro_scraping import interpro_scraping_pandas
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import pandas as pd
@@ -829,7 +832,10 @@ def confidence_interval(data, confidence=0.95):
 def log_metrics_data(data, SD):
     date_time = datetime.now().strftime("%d%m%Y-%H%M%S-")
     filepath = "metrics_data/" + date_time + SD + ".xlsx"
+    png_filepath = "metrics_data/" + date_time + SD + ".png"
     data.to_excel(filepath)
+
+    return png_filepath
 
 
 if __name__ == "__main__":
