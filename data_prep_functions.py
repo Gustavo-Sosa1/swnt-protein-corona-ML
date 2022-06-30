@@ -450,7 +450,7 @@ def clean_up_data_biopy(raw_data, proteins_ids):
             seq_data = temp_df
             first_pass = False
         else:
-            seq_data = seq_data.append(temp_df)
+            seq_data = pd.concat([seq_data, temp_df], axis=0)
     
     aa_list = ['A','R','N','D','C','E','Q','G','H','I','L','K','M','F','P','S','T','W','Y','V']
     aa_list.sort()
@@ -468,15 +468,16 @@ def clean_up_data_biopy(raw_data, proteins_ids):
 
 
 def clean_up_data_mass_spec(raw_data):
-    #calculate percent relative abundance
+    #calculate average relative abundance
     raw_data["Avg NP Relative Abundance"] = (raw_data["NP Relative Abundance_1"] + raw_data["NP Relative Abundance_2"] + raw_data["NP Relative Abundance_3"]) / 3
+    # remove any protein with avg zero abundance
+    raw_data["Avg NP Relative Abundance"] = raw_data["Avg NP Relative Abundance"].replace(0, np.nan)
+    raw_data.dropna(subset=["Avg NP Relative Abundance"], inplace=True)
+    #calculate percent relative abundance
     Abudance_sum = raw_data["Avg NP Relative Abundance"].sum()
     raw_data['NP_%_Abundance'] = (raw_data["Avg NP Relative Abundance"] / Abudance_sum) * 100
     #calculate enrichement
     raw_data["Enrichment"] = np.log2( raw_data["Avg NP Relative Abundance"]/ raw_data["FBS Relative Abundance"])
-    #remove any protein with avg zero abundance
-    raw_data["Avg NP Relative Abundance"] = raw_data["Avg NP Relative Abundance"].replace(0,np.nan)
-    raw_data.dropna(subset=["Avg NP Relative Abundance"], inplace=True)
 
     return raw_data[["Accession", "NP_%_Abundance", "Enrichment", "FBS Relative Abundance"]]
 
