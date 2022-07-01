@@ -365,33 +365,37 @@ def replace_all(list, loc_list, value):
 
 
 def clean_up_data_biopy(raw_data, proteins_ids):
-    # least data only biopy
     raw_data = raw_data.fillna(0) # fill nans
 
     #remove proteins removed in mass spec clean up
     tempdf = proteins_ids.merge(raw_data, how='inner', left_on="Accession", right_on="Entry")
-    
     cleaned_data = tempdf[['Entry', 'Protein names', 'Sequence', 'Length', 'Mass']]
-
-    
     cleaned_data = cleaned_data.fillna(0)
 
+    #turns sequence column into series that will be used to iterate over when calculating biopython features
     sequences = cleaned_data['Sequence']
+    #creates dataframe to store biopython features
     seq_data = pd.DataFrame([])
     first_pass = True
-    #count = 0
+
     for seq in sequences:
+        #determines if X or U are present in sequence
         X_Presence = seq.find("X")
         U_Presence = seq.find("U")
-        #count = count + 1
-        #print(count)
-        #seq = seq.replace("U", "") #cleans sequences to remove selenocysteine
+
+        #turns sequence into biopython sequence class
         analyzed_seq = ProteinAnalysis(seq)
+        #counts number of each amino acids in sequence returns dic
         aaCount = analyzed_seq.count_amino_acids()
+        #calculates percentage of each amino acid in seq, returns dic
         aa_percent = analyzed_seq.get_amino_acids_percent()
-        reg_aa = regularize_aa(aa_percent)# dict
+        #regularize_aa function is line 16 of this script, reformats biopyhton result by adding ammino acids that aren't present in sequence and fill count with zero
+        reg_aa = regularize_aa(aa_percent)
+        #alphabetize_aa function is line 26 of this script, orders dictionary in alphabetical order
         aa_values = alphabetize_aa(reg_aa)
 
+
+        #calculates molecular by replacing X with L if X is present
         if X_Presence == -1:
             mw = analyzed_seq.molecular_weight() #MW
         else:
@@ -402,8 +406,11 @@ def clean_up_data_biopy(raw_data, proteins_ids):
             analyzed_seq_adj = ProteinAnalysis(seq_adj)
             mw = analyzed_seq_adj.molecular_weight()
 
+        #calculates aromaticity of protein
         aromat = analyzed_seq.aromaticity()
-#calculates instability, flex, and gravy while dealing with "X" and "U"
+
+
+        #calculates instability, flex, and gravy while dealing with "X" and "U" by replacing with L and C if present
         if X_Presence == -1 and U_Presence == -1 :
             instab = analyzed_seq.instability_index() # float
             flex = analyzed_seq.flexibility()  # returns a list
@@ -438,37 +445,45 @@ def clean_up_data_biopy(raw_data, proteins_ids):
             flex = analyzed_seq_adj.flexibility()
             gravy = analyzed_seq_adj.gravy()
 
+        #calculates isoelectric point
+        iso = analyzed_seq.isoelectric_point()
 
-        iso = analyzed_seq.isoelectric_point() 
+        #calculates secondary structure presence
         secStruct = analyzed_seq.secondary_structure_fraction() # tuple of three floats (helix, turn, sheet)
         secStruct_disorder = 1 - sum(secStruct)
+
+        #calculates stats for flex feature
         flex_stat = (np.mean(flex), np.std(flex), np.var(flex), np.max(flex), np.min(flex), np.median(flex))
+
+        #stores all info in dataframe
         temp_df = pd.DataFrame([[seq, *aa_values, mw, aromat, instab, *flex_stat, iso, *secStruct, secStruct_disorder, gravy]])
         
-
+        #stores all info of every run into collective dataframe
         if first_pass:
             seq_data = temp_df
             first_pass = False
         else:
             seq_data = pd.concat([seq_data, temp_df], axis=0)
-    
+
+    #creates list of column names for dataframe
     aa_list = ['A','R','N','D','C','E','Q','G','H','I','L','K','M','F','P','S','T','W','Y','V']
     aa_list.sort()
     names_aa = ['frac_aa_' + i for i in aa_list]
     col_names = ['Sequence', *names_aa, 'molecular_weight', 'aromaticity', 'instability_index', 'flexibility_mean', 'flexibility_std', 'flexibility_var',
                  'flexibility_max', 'flexibility_min', 'flexibility_median', 'isoelectric_point', 'secondary_structure_fraction_helix',
                  'secondary_structure_fraction_turn', 'secondary_structure_fraction_sheet', 'secondary_structure_fraction_disordered', 'gravy']
-        
+    #changes column names
     seq_data.columns = col_names
     seq_data=seq_data.reset_index(drop=True)
 
+    #adds new features to protein details dataframe
     cleaned_data = pd.merge(cleaned_data, seq_data, on='Sequence')
     cleaned_data = cleaned_data.fillna(0)
     return cleaned_data
 
 
 def clean_up_data_mass_spec(raw_data):
-    #calculate average relative abundance
+    #calculate average relative abundance from triplicate results
     raw_data["Avg NP Relative Abundance"] = (raw_data["NP Relative Abundance_1"] + raw_data["NP Relative Abundance_2"] + raw_data["NP Relative Abundance_3"]) / 3
     # remove any protein with avg zero abundance
     raw_data["Avg NP Relative Abundance"] = raw_data["Avg NP Relative Abundance"].replace(0, np.nan)
