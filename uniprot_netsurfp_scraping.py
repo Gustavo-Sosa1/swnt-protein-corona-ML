@@ -198,32 +198,36 @@ def netsurfp_1point1_data_processing(unique_id_list, complete_netsurfp_df):
 
 def netsurfp_2_data_processing(unique_id_list, complete_netsurfp_df):
    #clean up data by removing missing amino acids
+   #ammino acids missing in protein sequences are filled in with X by uniprot, here I am removing X from th sequence
+   # but not not removing the protein
 
     complete_netsurfp_df = complete_netsurfp_df[complete_netsurfp_df['seq'] != 'X']
 
-    first_pass=True
+    first_pass=True #keep set to true always, initiatize part of function that makes dictionary will be set to false by
+   #function after first iteration of loop
+
     for i in unique_id_list:
-        # print('hi')
-        # get correct values
-        boolarray = complete_netsurfp_df['id'].str.contains(i)
-        filtered = complete_netsurfp_df[boolarray]
-        filtered['class assignment'] = np.where(filtered.rsa > 0.25, 'E', 'B')
-        # total amino acids
-        total_aa = filtered.shape[0]
+        boolarray = complete_netsurfp_df['id'].str.contains(i) #creates a series where the current protein being analyzed is present in netsurfp database
+        filtered = complete_netsurfp_df[boolarray] #filters netsurfp data using series from above
+        filtered['class assignment'] = np.where(filtered.rsa > 0.25, 'E', 'B') #creates a new column in netsurfp database that assigned each amino acids as E:Exposed or B: Buried based on rsa threshold of 0.25, threshold justified in netsurfp docs
+
+        total_aa = filtered.shape[0]   # counts total amino acids in protein
         
         #count exposed residues
         exposed = filtered[filtered['class assignment'] == 'E']
         exposed_count = exposed.shape[0]
-        if total_aa == 0:
+
+        if total_aa == 0:  #prints error if for some reason a protein doesn't have any amino acids
             print('Error at ',i)
 
             frac_exposed=0
             frac_buried = 0
 
-        else:
+        else:  #calculates the fraction of exposed and buried amino acids per protein
             frac_exposed = exposed_count / total_aa
             frac_buried = 1-frac_exposed
-        
+
+        #creates dictionary to store how many of each amino acid is contained per protein
         aa_dict = {'A':0, 'C':0, 'D':0, 'E':0, 'F':0, 'G':0, 'H':0, 
                 'I':0, 'K':0, 'L':0, 'M':0, 'N':0, 'P':0, 'Q':0,
                 'R':0, 'S':0, 'T':0, 'V':0, 'W':0, 'Y':0}
@@ -234,17 +238,20 @@ def netsurfp_2_data_processing(unique_id_list, complete_netsurfp_df):
             aa_exposed_frac_exposed = {'fraction_exposed_exposed_'+key: 0 for key, value in aa_dict.items()}
             
         else:
-            for j in exposed['seq']: # go through and count what needs to be added
+            for j in exposed['seq']: # goes how any of each amino acid is present in the subset of ammino acids that considered exposed
                 aa_dict[j] += 1
-
+            #calculates the fraction each type of ammino acid makes up out of total exposed ammino acids and total amino acids
             aa_exposed_frac_total = {'fraction_total_exposed_'+key: value / total_aa for key, value in aa_dict.items()}
             aa_exposed_frac_exposed = {'fraction_exposed_exposed_'+key: value / exposed_count for key, value in aa_dict.items()}
         
         nonpolar_aa = ['A', 'F', 'G', 'I', 'L', 'M', 'P', 'V', 'W']
         nonpolar_counts = 0
+
+        #counts number of nonpolar amino acids
         for k in nonpolar_aa:
             nonpolar_counts += aa_dict[k]
-        
+
+        # calculates the fraction non polar ammino acids that make up total exposed ammino acids and total amino acids
         if nonpolar_counts == 0: 
             nonpolar_exposed_frac_exposed = 0
             nonpolar_exposed_frac_total = 0
@@ -253,9 +260,11 @@ def netsurfp_2_data_processing(unique_id_list, complete_netsurfp_df):
             nonpolar_exposed_frac_exposed = nonpolar_counts / exposed_count
             nonpolar_exposed_frac_total = nonpolar_counts / total_aa
 
+        # calculates the fraction of polar ammino acids that make up total exposed ammino acids and total amino acids
         polar_exposed_frac_exposed = (exposed_count-nonpolar_counts) / exposed_count
         polar_exposed_frac_total = (total_aa-nonpolar_counts) / total_aa
-            
+
+        #addes features calculated thus into collective dictionary, while also calculating a few metrics for rsa and reformatting the secondary structure features
         data_to_update ={'entry': i, 'fraction_exposed':np.around(frac_exposed, 3), 'fraction_buried': np.around(frac_buried, 3),
                         'fraction_exposed_nonpolar_total':nonpolar_exposed_frac_total,
                         'fraction_exposed_nonpolar_exposed':nonpolar_exposed_frac_exposed,
@@ -271,12 +280,13 @@ def netsurfp_2_data_processing(unique_id_list, complete_netsurfp_df):
                         'nsp_secondary_structure_helix':np.around(np.sum(np.where(filtered.q3.str.contains('H'), True, False))/filtered.shape[0], 3),
                         'nsp_disordered':np.around(np.sum(filtered.disorder.to_numpy() >= 0.5)/filtered.shape[0],3)}
         
-        
+
+        #creates data frame from above dic
         if first_pass:
             netsurfp_processed_data = pd.DataFrame()
             netsurfp_processed_data = pd.DataFrame.from_dict(data_to_update, orient='index').transpose()
             first_pass = False
-        
+        #appends data to dataframe created above after first loop iteration
         else:
             netsurfp_processed_data = netsurfp_processed_data.append(pd.DataFrame.from_dict(data_to_update, orient='index').transpose(), ignore_index=True)
 
