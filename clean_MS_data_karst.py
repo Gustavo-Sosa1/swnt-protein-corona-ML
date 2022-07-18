@@ -1,7 +1,7 @@
 import pandas as pd
 
-filepath = "data/FBS_Alone_int36.csv"
-Save_Descriptor = "FBS_alone_int"
+filepath = "data/FBS_Alone_top3.csv"
+Save_Descriptor = "FBS_Alone_top3"
 
 #import data and drop uneeded columns and rows
 MS_data = pd.read_csv(filepath)
