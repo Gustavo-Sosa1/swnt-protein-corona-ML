@@ -218,8 +218,9 @@ def netsurfp_2_data_processing(unique_id_list, complete_netsurfp_df):
     for i in unique_id_list:
         boolarray = complete_netsurfp_df['id'].str.contains(i)  # creates a series where the current protein being analyzed is present in netsurfp database
         filtered = complete_netsurfp_df[boolarray]  # filters netsurfp data using series from above
-        filtered['class assignment'] = np.where(filtered.rsa > 0.25, 'E',
-                                                'B')  # creates a new column in netsurfp database that assigned each amino acids as E:Exposed or B: Buried based on rsa threshold of 0.25, threshold justified in netsurfp docs
+        filtered.loc[:,'class assignment'] = np.where(filtered.loc[:,'rsa'] > 0.25, 'E','B')
+        ##### WHY does this create setting withcopy warning!!?!!!
+        # creates a new column in netsurfp database that assigned each amino acids as E:Exposed or B: Buried based on rsa threshold of 0.25, threshold justified in netsurfp docs
 
         total_aa = filtered.shape[0]  # counts total amino acids in protein
 
@@ -305,8 +306,9 @@ def netsurfp_2_data_processing(unique_id_list, complete_netsurfp_df):
             first_pass = False
         # appends data to dataframe created above after first loop iteration
         else:
-            netsurfp_processed_data = netsurfp_processed_data.append(
-                pd.DataFrame.from_dict(data_to_update, orient='index').transpose(), ignore_index=True)
+            # netsurfp_processed_data = netsurfp_processed_data.append(pd.DataFrame.from_dict(data_to_update, orient='index').transpose(), ignore_index=True)
+            netsurfp_processed_data = pd.concat([netsurfp_processed_data,
+                pd.DataFrame.from_dict(data_to_update, orient='index').transpose()], ignore_index=True)
 
     return netsurfp_processed_data
 
